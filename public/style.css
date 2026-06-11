@@ -46,9 +46,14 @@ html, body {
   border-radius: 8px;
 }
 
-#hp-text, #score-text, #progress-text {
+#hp-text, #score-text, #progress-text, #stage-text {
   font-size: 14px;
   white-space: nowrap;
+}
+
+#stage-text {
+  color: #f5c542;
+  font-weight: 700;
 }
 
 #score-text { margin-left: auto; }

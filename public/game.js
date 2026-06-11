@@ -7,16 +7,25 @@ const hpBar = document.getElementById('hp-bar');
 const hpText = document.getElementById('hp-text');
 const scoreText = document.getElementById('score-text');
 const progressText = document.getElementById('progress-text');
+const stageText = document.getElementById('stage-text');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayMsg = document.getElementById('overlay-msg');
 const startBtn = document.getElementById('start-btn');
 const MAX_HP = 5;
+const QUESTIONS_PER_STAGE = 10;
+const BASE_MONSTER_SPEED = 0.3;
+const SPEED_INCREMENT_PER_STAGE = 0.15;
 let hp = MAX_HP;
 let score = 0;
 let currentIndex = 0;
 let questions = [];
 let isLocked = false;
+let stage = 1;
+let correctCount = 0;
+let totalAnswered = 0;
+let monsterSpeed = BASE_MONSTER_SPEED;
+let isLoadingQuestions = false;
 let particles = [];
 let warrior;
 let monster;
@@ -230,7 +239,7 @@ function update() {
     animFrame++;
     if (monster.alive && !monster.dying) {
         if (monster.x > monster.targetX) {
-            monster.x -= 0.3;
+            monster.x -= monsterSpeed;
         }
     }
     if (monster.dying) {
@@ -269,11 +278,12 @@ function updateHUD() {
     hpBar.style.width = pct + '%';
     hpText.textContent = `❤️ ${hp} / ${MAX_HP}`;
     scoreText.textContent = `🏆 ${score}`;
-    progressText.textContent = `${currentIndex} / ${questions.length}`;
+    progressText.textContent = `⚔️ ${totalAnswered}`;
+    stageText.textContent = `🏰 ${stage}`;
 }
 function showQuestion() {
     if (currentIndex >= questions.length) {
-        endGame();
+        loadNextBatch();
         return;
     }
     const q = questions[currentIndex];
@@ -291,22 +301,53 @@ function showQuestion() {
     monster.hitFlash = 0;
     isLocked = false;
 }
-async function fetchQuestions() {
-    const res = await fetch('/api/questions');
+async function fetchQuestions(targetStage) {
+    const res = await fetch(`/api/questions?stage=${targetStage}`);
     const data = await res.json();
     return data.questions;
+}
+async function loadNextBatch() {
+    if (isLoadingQuestions)
+        return;
+    isLoadingQuestions = true;
+    try {
+        const newQuestions = await fetchQuestions(stage);
+        questions = newQuestions;
+        currentIndex = 0;
+        updateHUD();
+        showQuestion();
+    }
+    catch {
+        overlay.classList.remove('hidden');
+        overlayTitle.textContent = '出错了';
+        overlayMsg.textContent = '无法加载题目，请刷新重试';
+        startBtn.textContent = '重试';
+    }
+    finally {
+        isLoadingQuestions = false;
+    }
+}
+function advanceStage() {
+    stage++;
+    monsterSpeed = BASE_MONSTER_SPEED + (stage - 1) * SPEED_INCREMENT_PER_STAGE;
+    updateHUD();
 }
 async function startGame() {
     overlay.classList.add('hidden');
     hp = MAX_HP;
     score = 0;
     currentIndex = 0;
+    correctCount = 0;
+    totalAnswered = 0;
+    stage = 1;
+    monsterSpeed = BASE_MONSTER_SPEED;
     particles = [];
     damageFlash = 0;
+    isLoadingQuestions = false;
     initPositions();
     updateHUD();
     try {
-        questions = await fetchQuestions();
+        questions = await fetchQuestions(stage);
     }
     catch {
         overlay.classList.remove('hidden');
@@ -315,22 +356,17 @@ async function startGame() {
         startBtn.textContent = '重试';
         return;
     }
+    updateHUD();
     showQuestion();
 }
 function endGame() {
     overlay.classList.remove('hidden');
-    if (hp <= 0) {
-        overlayTitle.textContent = '💀 勇士倒下了';
-        overlayMsg.textContent = `最终得分：${score}  |  已答：${currentIndex} 题`;
-    }
-    else {
-        overlayTitle.textContent = '🎉 通关！';
-        overlayMsg.textContent = `全部 ${questions.length} 题完成！得分：${score}`;
-    }
+    overlayTitle.textContent = '💀 勇士倒下了';
+    overlayMsg.textContent = `最终得分：${score}  |  闯过：${totalAnswered} 题  |  阶段：${stage}`;
     startBtn.textContent = '再来一局';
 }
 function handleAnswer(idx) {
-    if (isLocked || currentIndex >= questions.length)
+    if (isLocked)
         return;
     isLocked = true;
     const q = questions[currentIndex];
@@ -346,10 +382,16 @@ function handleAnswer(idx) {
         }
     });
     if (correct) {
-        score += 10;
+        score += 10 * stage;
+        correctCount++;
+        totalAnswered++;
         warrior.swinging = true;
         warrior.swingTimer = 0;
         monster.hitFlash = 8;
+        if (correctCount >= QUESTIONS_PER_STAGE) {
+            advanceStage();
+            correctCount = 0;
+        }
         setTimeout(() => {
             monster.alive = false;
             monster.dying = true;
@@ -360,6 +402,7 @@ function handleAnswer(idx) {
     }
     else {
         hp--;
+        totalAnswered++;
         damageFlash = 15;
         spawnParticles(warrior.x, warrior.y - 20, 15, '#e74c3c');
         if (hp <= 0) {

@@ -7,9 +7,11 @@ const PORT = 5503;
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.get('/api/questions', (_req, res) => {
-  const questions = generateQuestions(50);
-  res.json({ questions });
+app.get('/api/questions', (req, res) => {
+  const stage = parseInt(String(req.query.stage || '1'), 10);
+  const safeStage = isNaN(stage) || stage < 1 ? 1 : stage;
+  const questions = generateQuestions(10, safeStage);
+  res.json({ questions, stage: safeStage });
 });
 
 app.get('*', (_req, res) => {
