@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>口算打怪</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="hud">
+      <div id="hp-bar-wrap"><div id="hp-bar"></div></div>
+      <span id="hp-text">❤️ 5 / 5</span>
+      <span id="score-text">🏆 0</span>
+      <span id="progress-text">0 / 50</span>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <div id="question-area">
+      <span id="question-text"></span>
+    </div>
+
+    <div id="options-area">
+      <button class="option-btn" data-idx="0"></button>
+      <button class="option-btn" data-idx="1"></button>
+      <button class="option-btn" data-idx="2"></button>
+    </div>
+
+    <div id="overlay">
+      <div id="overlay-box">
+        <h1 id="overlay-title">口算打怪</h1>
+        <p id="overlay-msg">消灭怪物，保卫城堡！</p>
+        <button id="start-btn">开始游戏</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/game.js"></script>
+</body>
+</html>
